@@ -73,7 +73,8 @@ $date = NULL;
 
 $bot = new CockyBot($twitter, $qType, $genres, $date);
 
-// these are the default settings, but can optionally be changed
+// these are the default settings, and don't need to be set explicityly
+// but demoing to show how they can optionally be changed
 $bot->setQueryGenresArray($genres);
 $bot->setQueryType($qType);
 $bot->setQueryDate($date);
@@ -82,6 +83,7 @@ $bot->setQueryLiveStatus('LIVE');
 $bot->setQueryMarkDrawingCode('"4"');
 $bot->setQueryTypeOfMark('Trademark OR "Collective Mark"');
 $bot->setQueryInternationalClasses('"009" OR "016"');
+
 $bot->run();
 exit(0);
 
