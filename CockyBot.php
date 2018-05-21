@@ -1,7 +1,7 @@
 <?php
 
 // Searches the USPTO's Trademark Electronic Search System (TESS) and tweets about it
-// TESS site: http://tmsearch.uspto.gov/
+// http://tmsearch.uspto.gov/
 // v1.0
 // copyright 2018 cockybot
 // https://cockybot.com
@@ -20,8 +20,10 @@ class BookQueryResult extends QueryResult {
     // returns a url to search for the word mark in the books category at amazon
 	// e.g. http://tsdr.uspto.gov/documentviewer?caseId=sn87604348
 	public function getAmazonSearchLink() {
+		$affiliateTag = "&tag=dommechron-20";
 		$baseUrl = "https://www.amazon.com/s/?url=search-alias%3Dstripbooks&field-keywords=";
 		return  $baseUrl . urlencode($this->wordMark);
+		return  $baseUrl . urlencode($this->wordMark) . $affiliateTag;
 	}
 	public function __construct($queryResult) {		
 		$this->serialNumber = $queryResult->serialNumber;
@@ -153,6 +155,8 @@ class CockyBot {
 		foreach($this->genres as $genreKey => $value) {
 			$individualGenreQueries[$genreKey] = self::getQueryStringUsingGenreString($value);
 		}
+		var_dump($individualGenreQueries);
+		exit(0);
 		return $individualGenreQueries;
 	}
 	
@@ -164,7 +168,7 @@ class CockyBot {
 	private function getQueryStringUsingGenreString($genres) {
 		$q = self::getQueryStringDate();
 		$q .= ' AND ('.$this->gs.')[GS]';
-		$q .= ' WITH ('.self::genresToQString($this->genres).')[GS]';
+		$q .= ' WITH ('.$genres.')[GS]';
 		$q .= ' SAME (('.$this->ic.') WITH IC)[GS]';
 		$q .= ' AND ('.$this->md.')[MD] ';
 		$q .= ' AND ('.$this->ld.')[LD] ';
