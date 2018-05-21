@@ -56,7 +56,7 @@ $genres = [
 // 	"thriller" => 'thriller',
 // 	"tragedy" => 'tragedy',
 // 	"werewolves" => 'werewolves',
-//	"women's" => '"women s fiction"',
+	"women's" => '"women s fiction"',
 	"young adult" => '"young adult" OR teen',
 ];
 $genres = ["romance" => "romance"];
