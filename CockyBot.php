@@ -164,7 +164,7 @@ class CockyBot {
 	private function getQueryStringUsingGenreString($genres) {
 		$q = self::getQueryStringDate();
 		$q .= ' AND ('.$this->gs.')[GS]';
-		$q .= ' WITH ('.self::genresToQString($this->genres).')[GS]';
+		$q .= ' WITH ('.$genres.')[GS]';
 		$q .= ' SAME (('.$this->ic.') WITH IC)[GS]';
 		$q .= ' AND ('.$this->md.')[MD] ';
 		$q .= ' AND ('.$this->ld.')[LD] ';
