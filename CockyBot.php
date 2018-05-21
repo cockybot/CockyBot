@@ -4,6 +4,10 @@
 // http://tmsearch.uspto.gov/
 // v1.0
 // copyright 2018 cockybot
+//
+// Includes "Twitter for PHP" licensced under BSD 3-Clause License
+// https://github.com/dg/twitter-php
+// https://github.com/dg/twitter-php/blob/master/license.md
 
 //Load required files
 require_once "./TESS_Session.php";
