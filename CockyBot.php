@@ -19,10 +19,8 @@ class BookQueryResult extends QueryResult {
     // returns a url to search for the word mark in the books category at amazon
 	// e.g. http://tsdr.uspto.gov/documentviewer?caseId=sn87604348
 	public function getAmazonSearchLink() {
-		$affiliateTag = "&tag=dommechron-20";
 		$baseUrl = "https://www.amazon.com/s/?url=search-alias%3Dstripbooks&field-keywords=";
 		return  $baseUrl . urlencode($this->wordMark);
-		return  $baseUrl . urlencode($this->wordMark) . $affiliateTag;
 	}
 	public function __construct($queryResult) {		
 		$this->serialNumber = $queryResult->serialNumber;
