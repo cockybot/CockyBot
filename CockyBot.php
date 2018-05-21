@@ -1,9 +1,10 @@
 <?php
 
 // Searches the USPTO's Trademark Electronic Search System (TESS) and tweets about it
-// http://tmsearch.uspto.gov/
+// TESS site: http://tmsearch.uspto.gov/
 // v1.0
 // copyright 2018 cockybot
+// https://cockybot.com
 //
 // Includes "Twitter for PHP" licensced under BSD 3-Clause License
 // https://github.com/dg/twitter-php
