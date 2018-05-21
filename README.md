@@ -25,6 +25,11 @@ $bot->run();
 ### Note: 
 To create your own version, you need to make a twitter app and get keys and tokens at https://apps.twitter.com
 
+By default actual posts to twitter are off.  Once you've tested your queries, turn on live tweeting by changing the REAL_TWEETS constant in CockyBot.php to true.
+```php
+const REAL_TWEETS = false;	// set to true to make tweets
+```
+
 ### General notes on TESS query parameters used by CockyBot:
 Constructed with boolean logic. 
 Parenthetical grouping for order of operations is permitted.
