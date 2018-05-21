@@ -4,7 +4,7 @@ Searches for new trademark appliction filings and publications for opposition ma
 
 Code used by CockyBot - https://cockybot.com and https://twitter.com/cockybot
 
-Example basic usage:
+### Example basic usage:
 
 ```php
 require_once "./CockyBot.php";
@@ -43,3 +43,8 @@ Search fields relevant to CockyBot:
  	- and "009" - ("Electrical and Scientific Apparatus", which includes ebooks)
 
 For more details, see TESS's help page.  A version that doesn't require login is mirrored here: https://cockybot.com/TESS_Help.html 
+
+### Includes
+- https://github.com/cockybot/TESS_Session
+- https://github.com/cubiclesoft/ultimate-web-scraper/blob/master/support/tag_filter.php
+- https://github.com/dg/twitter-php
