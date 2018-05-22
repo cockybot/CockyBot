@@ -1,6 +1,6 @@
 # CockyBot
 Twitter bot to tweet about trademark applications relevant to authors of fiction.
-Searches for new trademark appliction filings and publications for opposition matching specified criteria and tweets about them.
+Searches for new trademark application filings and publications for opposition matching specified criteria and tweets about them.
 
 Code used by CockyBot - https://cockybot.com and https://twitter.com/cockybot
 
