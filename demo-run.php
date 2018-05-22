@@ -74,7 +74,7 @@ $genres = [
 	"thriller" => '"in the field of" ADJ10 thriller',
 // 	"tragedy" => 'tragedy',
 // 	"werewolves" => 'werewolves',
-//	"women's" => '"women s fiction"',
+	"women's" => '"women s fiction"',
 	"young adult" => '"in the field of" ADJ10 ("young adult" OR teen)',
 ];
 
