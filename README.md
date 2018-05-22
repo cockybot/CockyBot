@@ -25,7 +25,7 @@ $bot->run();
 ### Note: 
 To create your own version, you need to make a twitter app and get keys and tokens at https://apps.twitter.com
 
-By default actual posts to twitter are off.  Once you've tested your queries, turn on live with run method parameters:
+By default actual posts to twitter are off.  Once you've tested your queries, turn on real, live tweets by calling the run method with appropriate parameters:
 ```php
 $useRealTweets = true;
 $bot = new CockyBot($twitter, $qType, $genres);
