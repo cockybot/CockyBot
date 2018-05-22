@@ -1,7 +1,7 @@
 <?php
 
 // Searches the USPTO's Trademark Electronic Search System (TESS) and tweets about it
-// http://tmsearch.uspto.gov/
+// TESS site: http://tmsearch.uspto.gov/
 // v1.0
 // copyright 2018 cockybot
 // https://cockybot.com
@@ -14,21 +14,26 @@
 require_once "./TESS_Session.php";
 require_once './twitter-php/twitter.class.php';
 
-// Since we focus on books, extend class to provide links to search Amazon's book
-// category for existing titles similar to the mark
+// Since we focus on books, extend class to provide functionality for books
 class BookQueryResult extends QueryResult {
-    // returns a url to search for the word mark in the books category at amazon
-	// e.g. http://tsdr.uspto.gov/documentviewer?caseId=sn87604348
+    
+    // string with comma-separated list of tags for genres associated with the result
+	public $genreTagList; 
+	
+	// returns a url to search for the word mark in the books category at amazon
+	// e.g. https://www.amazon.com/s/?url=search-alias%3Dstripbooks&field-keywords=COCKY
 	public function getAmazonSearchLink() {
 		$affiliateTag = "&tag=dommechron-20";
 		$baseUrl = "https://www.amazon.com/s/?url=search-alias%3Dstripbooks&field-keywords=";
 		return  $baseUrl . urlencode($this->wordMark);
 		return  $baseUrl . urlencode($this->wordMark) . $affiliateTag;
 	}
+	
 	public function __construct($queryResult) {		
 		$this->serialNumber = $queryResult->serialNumber;
 		$this->registrationNumber = $queryResult->registrationNumber;
 		$this->wordMark = $queryResult->wordMark;
+		$this->genreTagList = "";
 	}
 }
 
@@ -61,9 +66,10 @@ class CockyBot {
 	private $tm = 'Trademark OR "Collective Mark"';
 	private $ic = '"009" OR "016"'; // encompasses printed books and ebooks
 	
+	private $realTweets = false; // flag for whether to use real tweets or just test
+	private $tweetImages = true; // flag for whether to use images in tweets or not
+	
 	const DELAY_BETWEEN_TWEETS = 120; // 2 min delay between tweets
-	const REAL_TWEETS = false;	// set to true to make tweets
-	const TWEET_IMAGES = false;	// set to true to include mark image with tweets
 	
 	public function __construct($twitter, $qType, $genres, $date = NULL) {
 	
@@ -97,21 +103,52 @@ class CockyBot {
     }
 	
 	// performs queries, processses results, and sends tweets
-	public function run() {
+	// optional parameters:
+	// $realTweets - boolean for whether to make real tweets with the run (true) or just test (false)
+	// $tweetImages - boolean for whether to tweet images with the run (true) or not (false)
+	// if not set, the run will default to the last setting or, if there is none: false, false
+	public function run($realTweets = NULL, $tweetImages = NULL) {
+		if($realTweets !== NULL && ($realTweets === true || $realTweets === false) ) {
+			$this->realTweets = $realTweets;
+		}
+		if($tweetImages !== NULL && ($tweetImages === true || $tweetImages === false) ) {
+			$this->tweetImages = $tweetImages;
+		}
 		$mainQueryString = self::getMainQueryString();
 		$individualGenreQStrings = self::getIndividualGenreQueries();
 		
 		$session = new TESS_Session();
 		$session->logIn();
 		$results = $session->getQueryResults($mainQueryString);
+		$hitCount = count($results);
+		$results = self::getNewResults($results);
+		echo "Search found ".count($results)." new record".(count($results)==1?"":"s").".\n";
 		$individualGenreResults = [];
-		foreach($individualGenreQStrings as $genre => $query) {
-			sleep(5);
-			$individualGenreResults[$genre] = $session->getQueryResults($query);
+		// no need to run individual queries if no rew results
+		if(count($results) > 0) {
+			foreach($individualGenreQStrings as $genre => $query) {
+				sleep(5);
+				$individualGenreResults[$genre] = $session->getQueryResults($query);
+			}
 		}
 		$session->logOut();
 		
 		self::processResults($results, $individualGenreResults);
+    }
+    
+    // filter the results to get only ones that haven't already been tweeted
+    // parameters:
+    // $results - an array of QueryResults
+    // returns: array of QueryResults containing only those entried from $results that 
+    // have not been previously tweeted
+    private function getNewResults($results) {
+    	$newResulst = [];
+    	foreach ($results as $result) {
+    		if(!isset( $this->usedSerialNumbers[intval($result->serialNumber)] )) {
+    			$newResults[] = $result;
+    		}
+    	}
+    	return $newResults;
     }
 	
 	// creates an appropriate string to represent the date portion of query
@@ -131,7 +168,7 @@ class CockyBot {
 	// If valid, parses it into Y, M, D,  Note: doubles as date validation
 	// returns: array with Y, M, D compents on valid string, false on invalid
 	private function parseDateArgument($dateString) {
-		preg_match('/^([12?][09?][\d?]{2})([\d?]{2})([\d?]{2})$/', $dateString, $matches);
+		preg_match('/^([12?][09?][\d?]{2})([01?][\d?])([0123?][\d?])$/', $dateString, $matches);
 		if($matches) {
 			$year = $matches[1];
 			$month = $matches[2];
@@ -155,8 +192,6 @@ class CockyBot {
 		foreach($this->genres as $genreKey => $value) {
 			$individualGenreQueries[$genreKey] = self::getQueryStringUsingGenreString($value);
 		}
-		var_dump($individualGenreQueries);
-		exit(0);
 		return $individualGenreQueries;
 	}
 	
@@ -277,22 +312,28 @@ class CockyBot {
 	private function processResults($results, $individualGenreResults) {
 		$resultIndex = 0;
 		$tweetCount = 0;
-		foreach($results as $result) {
-			$bookResult = new BookQueryResult($result);
+		foreach((array) $results as $result) {
 			// only do new results that haven't been previously tweeted
+			// probably don't need this check anymore, but keeping it as extra safety
 			if(!isset( $this->usedSerialNumbers[intval($result->serialNumber)] )) {
-				if($resultIndex != 0 && self::REAL_TWEETS) {
+				if($resultIndex != 0 && $this->realTweets) {
 					sleep(self::DELAY_BETWEEN_TWEETS);
 				}
-				$genreList = self::createGenreListForResult($result, $individualGenreResults);
-				$this->usedSerialNumbers[] = intval($result->serialNumber);
-				file_put_contents($this->usedSerialNumbersFileName, $result->serialNumber."\n", FILE_APPEND);
-				self::tweetNotice($bookResult, $genreList);
-				$tweetCount++;
+				$bookResult = new BookQueryResult($result);
+				$bookResult->genreTagList = self::createGenreListForResult($result, $individualGenreResults);				
+				try {
+					self::tweetNotice($bookResult);
+					$this->usedSerialNumbers[] = intval($result->serialNumber);
+					file_put_contents($this->usedSerialNumbersFileName, $result->serialNumber."\n", FILE_APPEND);
+					$tweetCount++;
+				} catch (TwitterException $e) {
+					echo 'Error: ' . $e->getMessage();
+				}
+				
 			}
 			$resultIndex++;
 		}
-		echo "\nTweeted " . $tweetCount . " of " . count($results) . " found.\n";
+		echo "\nSuccessfully tweeted ".$tweetCount." of ".count($results)." new records found.\n";
 	}
 
 	// Load up an array with all previously tweeted serial numbers from an appropriate file
@@ -305,9 +346,9 @@ class CockyBot {
 		$usedSerialNumbers = [];
 		$usedSerialNumbersFileName = "";
 		if($this->qType === "PO") {
-			$usedSerialNumbersFileName = (self::REAL_TWEETS ? "tweeted_po_sns.txt" : "tweeted_po_sns_debug.txt");
+			$usedSerialNumbersFileName = ($this->realTweets ? "tweeted_po_sns.txt" : "tweeted_po_sns_debug.txt");
 		} else if($this->qType === "FD") {
-			$usedSerialNumbersFileName = (self::REAL_TWEETS ? "tweeted_fd_sns.txt" : "tweeted_fd_sns_debug.txt");
+			$usedSerialNumbersFileName = ($this->realTweets ? "tweeted_fd_sns.txt" : "tweeted_fd_sns_debug.txt");
 		} else {
 			error_log("Didn't recognize query type: " . $this->qType);
 			exit(3);
@@ -361,37 +402,28 @@ class CockyBot {
 	// parameters: 
 	// $result - the BookQueryResult to tweet about
 	// $genrelist - the list of genre keywords it matched on - maybe should make property of BookQueryResult?
-	private function tweetNotice($result, $genreList) {
-		$historical = $this->makeHistoricalPost;
+	private function tweetNotice($result) {
 		$messsage = "";
-		if($historical) $message .= "From my ".self::formatQueryDate($this->date)." memory bank:\n";
-		if($this->qType === "PO") {
-			$message .= "An application to trademark “" . $result->wordMark;
-			$message .= "” was ".($historical?"":"just ")."published for opposition.";
+		if($this->makeHistoricalPost) {
+			$message .= "From my ".self::formatQueryDate($this->date)." memory bank:\n";
 		}
-		if($this->qType === "FD") {
-			$message .= "An application to trademark “" . $result->wordMark;
-			$message .= "” was ".($historical?"":"just ")."filed.";
-		}	
+		$message .= "An application to trademark “" . $result->wordMark;
+		$message .= "” was ".($historical?"":"just ");
+		$message .= ($this->qType === "PO"?"published for opposition.":"filed.");
 		$message .= "\nCheck the links below to view more information:\n";
 		$message .= "Status: " . $result->getShareableStatusLink() . "\n";
 		$message .= "Documents: " . $result->getShareableDocumentLink() . "\n";
 		$message .= "AMZN: " . $result->getAmazonSearchLink() . "\n";
-		$message .= "keywords: " . $genreList;
+		$message .= "keywords: " . $result->genreTagList;
 		echo "\n" . $message . "\n";
 	
 		$imageFilePath = "./tmp_img.png";
-		$imgSet = $result->saveImageAsFile($imageFilePath);
 
-		if(self::REAL_TWEETS) {
-			try {
-				if($imgSet && self::TWEET_IMAGES) {
-					$tweet = $this->twitter->send($message, $imageFilePath);
-				} else {
-					$tweet = $this->twitter->send($message);
-				}
-			} catch (TwitterException $e) {
-				echo 'Error: ' . $e->getMessage();
+		if($this->realTweets) {
+			if($this->tweetImages && $result->saveImageAsFile($imageFilePath)) {
+				$tweet = $this->twitter->send($message, $imageFilePath);
+			} else {
+				$tweet = $this->twitter->send($message);
 			}
 		}
 	}
