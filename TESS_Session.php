@@ -11,7 +11,7 @@
 // http://barebonescms.com/documentation/license_and_restrictions/
 
 require_once "./tag_filter.php";
-define("TESS_SESSION_DEBUG", "1");             // set to "0" to disable extra logging
+define("TESS_SESSION_DEBUG", "0");             // set to "0" to disable extra logging
 define("TESS_HTML_DUMP_LENGTH", "80"); // num characters of html responses to dump in debug
 
 class TESSException extends Exception {	
@@ -310,13 +310,13 @@ class TESS_Session {
 				}
 				for ($i=0; $i<count($rowData); $i++) {
 					if ($rowData[$i] == "Serial Number" && $i+1<count($rowData)) {
-						$serialNumber = $rowData[i+1];
+						$serialNumber = $rowData[$i+1];
 					}
 					if ($rowData[$i] == "Word Mark" && $i+1<count($rowData)) {
-						$wordMark = $rowData[i+1];
+						$wordMark = $rowData[$i+1];
 					}
 					if ($rowData[$i] == "Registration Number" && $i+1<count($rowData)) {
-						$registrationNumber = $rowData[i+1];
+						$registrationNumber = $rowData[$i+1];
 					}
 				}
 			}
