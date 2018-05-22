@@ -97,7 +97,6 @@ class CockyBot {
 			$msg = "constructor $date parameter was invalid";
 			throw new CockyBotException($msg, CockyBotException::ERROR_INVALID_CONSTRUCTION, $e);
 		}
-		self::setPreviouslyTweetedSerialNumbers();
     }
 	
 	// performs queries, processses results, and sends tweets
@@ -112,6 +111,7 @@ class CockyBot {
 		if($tweetImages !== NULL && ($tweetImages === true || $tweetImages === false) ) {
 			$this->tweetImages = $tweetImages;
 		}
+		self::setPreviouslyTweetedSerialNumbers();
 		$mainQueryString = self::getMainQueryString();
 		$individualGenreQStrings = self::getIndividualGenreQueries();
 		
