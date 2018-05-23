@@ -23,15 +23,16 @@
 
 //Load required files
 require_once "./CockyBot.php";
-
-// TWITTER CREDENTIALS – NEVER PLACE THIS FILE IN A PUBLIC LOCATION!
-// Get yours from: https://apps.twitter.com/
-$consumerKey = "XXXXXXXXXXXXXXXXXXXXXXXXX";
-$consumerSecret = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-$accessToken = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-$accessTokenSecret = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+require_once "./twitter-credentials.php";
 
 $twitter = new Twitter($consumerKey, $consumerSecret, $accessToken, $accessTokenSecret);
+
+if(!$twitter->authenticate()) {
+	$msg = "Error: Twitter authentication failed\n";
+	$msg .= "Make sure you entered valid credentials in twitter-credentials.php\n";
+	$msg .= "Script will continue but no tweets will be sent.\n";
+	echo $msg;
+}
 
 // Select type of query to run:
 // PO - date of publication
