@@ -147,10 +147,10 @@ function parseLaunchArguments($argv, &$qType, &$date, &$useRealTweets, &$tweetIm
 					echo "Invalid argument '".$argv[$i+1]."' given for query type (-t flag).\n";
 				}
 			} elseif ($argv[$i] === "-d" || $argv[$i] === "-date") {
-				if( preg_match('/^[12?][09?][\d?]{2}[01?][\d?][0123?][\d?]$/', $argv[$i+1]) ) {
+				if( CockyBot::parseDateArgument($argv[$i+1]) ) {
 					echo "Searching for date: ".$argv[$i+1]."\n";
+					$date = $argv[$i+1];
 					$i++;
-					$qDate = $argv[$i+1];
 				} else {
 					echo "Invalid argument '".$argv[$i+1]."' given for date (-d flag).\n";
 				}
