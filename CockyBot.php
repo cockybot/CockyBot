@@ -68,6 +68,7 @@ class CockyBot {
 	private $tweetImages = true; // flag for whether to use images in tweets or not
 	
 	const DELAY_BETWEEN_TWEETS = 120; // 2 min delay between tweets
+	const DELAY_BETWEEN_QUERIES = 5;  // wait for 5 seconds between queries to TESS
 	
 	public function __construct($twitter, $qType, $genres, $date = NULL) {
 	
@@ -80,19 +81,19 @@ class CockyBot {
 			throw new CockyBotException($msg, CockyBotException::ERROR_INVALID_CONSTRUCTION);
 		}
 		try {
-			self::setQueryType($qType);
+			$this->setQueryType($qType);
 		} catch (CockyBotException $e) {
 			$msg = "constructor $qType parameter was invalid";
 			throw new CockyBotException($msg, CockyBotException::ERROR_INVALID_CONSTRUCTION, $e);		
 		}
 		try {
-			self::setQueryGenresArray($genres);
+			$this->setQueryGenresArray($genres);
 		} catch (CockyBotException $e) {
 			$msg = "constructor $genres parameter was invalid";
 			throw new CockyBotException($msg, CockyBotException::ERROR_INVALID_CONSTRUCTION);		
 		}
 		try {
-			self::setQueryDate($date);
+			$this->setQueryDate($date);
 		} catch (CockyBotException $e) {
 			$msg = "constructor $date parameter was invalid";
 			throw new CockyBotException($msg, CockyBotException::ERROR_INVALID_CONSTRUCTION, $e);
@@ -111,27 +112,27 @@ class CockyBot {
 		if($tweetImages !== NULL && ($tweetImages === true || $tweetImages === false) ) {
 			$this->tweetImages = $tweetImages;
 		}
-		self::setPreviouslyTweetedSerialNumbers();
-		$mainQueryString = self::getMainQueryString();
-		$individualGenreQStrings = self::getIndividualGenreQueries();
+		$this->setPreviouslyTweetedSerialNumbers();
+		$mainQueryString = $this->getMainQueryString();
+		$individualGenreQStrings = $this->getIndividualGenreQueries();
 		
 		$session = new TESS_Session();
 		$session->logIn();
 		$results = $session->getQueryResults($mainQueryString);
 		$hitCount = count($results);
-		$results = self::getNewResults($results);
+		$results = $this->getNewResults($results);
 		echo "Search found ".count($results)." new record".(count($results)==1?"":"s").".\n";
 		$individualGenreResults = [];
 		// no need to run individual queries if no rew results
 		if(count($results) > 0) {
 			foreach($individualGenreQStrings as $genre => $query) {
-				sleep(5);
+				sleep(self::DELAY_BETWEEN_QUERIES);
 				$individualGenreResults[$genre] = $session->getQueryResults($query);
 			}
 		}
 		$session->logOut();
 		
-		self::processResults($results, $individualGenreResults);
+		$this->processResults($results, $individualGenreResults);
     }
     
     // filter the results to get only ones that haven't already been tweeted
@@ -165,7 +166,7 @@ class CockyBot {
 	// $dateString - a string with format YYYYMMDD (and ? wildcards)
 	// If valid, parses it into Y, M, D,  Note: doubles as date validation
 	// returns: array with Y, M, D compents on valid string, false on invalid
-	private function parseDateArgument($dateString) {
+	public static function parseDateArgument($dateString) {
 		preg_match('/^([12?][09?][\d?]{2})([01?][\d?])([0123?][\d?])$/', $dateString, $matches);
 		if($matches) {
 			$year = $matches[1];
@@ -180,7 +181,7 @@ class CockyBot {
 	// convenience method 
 	// returns: the query string for the primary request
 	private function getMainQueryString() {
-		return self::getQueryStringUsingGenreString(self::genresToQString($this->genres));
+		return $this->getQueryStringUsingGenreString(self::genresToQString($this->genres));
 	}
 	
 	// convenience method
@@ -188,7 +189,7 @@ class CockyBot {
 	private function getIndividualGenreQueries() {
 		$individualGenreQueries = [];
 		foreach($this->genres as $genreKey => $value) {
-			$individualGenreQueries[$genreKey] = self::getQueryStringUsingGenreString($value);
+			$individualGenreQueries[$genreKey] = $this->getQueryStringUsingGenreString($value);
 		}
 		return $individualGenreQueries;
 	}
@@ -199,7 +200,7 @@ class CockyBot {
 	// 20180512[FD] AND (book OR novels NOT NEAR graphic OR "short stories")[GS] WITH (romance)[GS] 
 	// SAME (("009" OR "016") WITH IC)[GS] AND ("4")[MD]  AND (LIVE)[LD]  AND (Trademark OR "Collective Mark")[TM]
 	private function getQueryStringUsingGenreString($genres) {
-		$q = self::getQueryStringDate();
+		$q = $this->getQueryStringDate();
 		$q .= ' AND ('.$this->gs.')[GS]';
 		$q .= ' WITH ('.$genres.')[GS]';
 		$q .= ' SAME (('.$this->ic.') WITH IC)[GS]';
@@ -230,7 +231,7 @@ class CockyBot {
 	
 	public function setQueryDate($date) {
 		if($date && self::parseDateArgument($date)) {
-			$this->date = $date; //TODO
+			$this->date = $date;
 			$this->makeHistoricalPost = true;
 		} else {
 			if($date !== NULL && !self::parseDateArgument($date)) {
@@ -320,7 +321,7 @@ class CockyBot {
 				$bookResult = new BookQueryResult($result);
 				$bookResult->genreTagList = self::createGenreListForResult($result, $individualGenreResults);				
 				try {
-					self::tweetNotice($bookResult);
+					$this->tweetNotice($bookResult);
 					$this->usedSerialNumbers[] = intval($result->serialNumber);
 					file_put_contents($this->usedSerialNumbersFileName, $result->serialNumber."\n", FILE_APPEND);
 					$tweetCount++;
@@ -378,7 +379,7 @@ class CockyBot {
 	// $individualGenreResults - the array of genre tags holding arrays with associated hits
 	// returns: string with comma-separated of genre tags with queries results that 
 	// included the specified $result  
-	private function createGenreListForResult($result, $individualGenreResults) {
+	private static function createGenreListForResult($result, $individualGenreResults) {
 		$matchCount = 0;
 		foreach ($individualGenreResults as $genre => $results) {
 			if(in_array($result, $results)) {
@@ -406,7 +407,7 @@ class CockyBot {
 			$message .= "From my ".self::formatQueryDate($this->date)." memory bank:\n";
 		}
 		$message .= "An application to trademark “" . $result->wordMark;
-		$message .= "” was ".($historical?"":"just ");
+		$message .= "” was ".($this->makeHistoricalPost?"":"just ");
 		$message .= ($this->qType === "PO"?"published for opposition.":"filed.");
 		$message .= "\nCheck the links below to view more information:\n";
 		$message .= "Status: " . $result->getShareableStatusLink() . "\n";
@@ -427,7 +428,7 @@ class CockyBot {
 	}
 
 	// Formats timestamps j M Y for inclusion in historical tweets
-	private function formatQueryDate($date) {
+	private static function formatQueryDate($date) {
 		$dateComponents = self::parseDateArgument($date);
 		$y = $dateComponents[0];
 		$m = $dateComponents[1];
@@ -450,7 +451,7 @@ class CockyBot {
 	}
 
 	// takes an array of genres search strings and concatenates them with ORs between
-	private function genresToQString($genreArray) {
+	private static function genresToQString($genreArray) {
 		$i=0;
 		foreach($genreArray as $genre) {
 			if($i == 0) {
