@@ -141,7 +141,7 @@ class CockyBot {
     // returns: array of QueryResults containing only those entried from $results that 
     // have not been previously tweeted
     private function getNewResults($results) {
-    	$newResulst = [];
+    	$newResults = [];
     	foreach ($results as $result) {
     		if(!isset( $this->usedSerialNumbers[intval($result->serialNumber)] )) {
     			$newResults[] = $result;
@@ -381,9 +381,10 @@ class CockyBot {
 	// included the specified $result  
 	private static function createGenreListForResult($result, $individualGenreResults) {
 		$matchCount = 0;
+		$str = "";
 		foreach ($individualGenreResults as $genre => $results) {
 			if(in_array($result, $results)) {
-				if(!$str) $str = $genre;
+				if($str==="") $str = $genre;
 				else $str .= ", " . $genre;
 				$matchCount++;
 			}
@@ -402,7 +403,7 @@ class CockyBot {
 	// $result - the BookQueryResult to tweet about
 	// $genrelist - the list of genre keywords it matched on - maybe should make property of BookQueryResult?
 	private function tweetNotice($result) {
-		$messsage = "";
+		$message = "";
 		if($this->makeHistoricalPost) {
 			$message .= "From my ".self::formatQueryDate($this->date)." memory bank:\n";
 		}
