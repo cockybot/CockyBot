@@ -106,10 +106,10 @@ class CockyBot {
 	// $tweetImages - boolean for whether to tweet images with the run (true) or not (false)
 	// if not set, the run will default to the last setting or, if there is none: false, false
 	public function run($realTweets = NULL, $tweetImages = NULL) {
-		if($realTweets !== NULL && ($realTweets === true || $realTweets === false) ) {
+		if($realTweets === true || $realTweets === false) {
 			$this->realTweets = $realTweets;
 		}
-		if($tweetImages !== NULL && ($tweetImages === true || $tweetImages === false) ) {
+		if($tweetImages === true || $tweetImages === false) {
 			$this->tweetImages = $tweetImages;
 		}
 		$this->setPreviouslyTweetedSerialNumbers();
@@ -317,6 +317,7 @@ class CockyBot {
 			if(!isset( $this->usedSerialNumbers[intval($result->serialNumber)] )) {
 				if($resultIndex != 0 && $this->realTweets) {
 					sleep(self::DELAY_BETWEEN_TWEETS);
+					if($resultIndex % 5 == 0) sleep(self::DELAY_BETWEEN_TWEETS); //add extra delay to avoid ban
 				}
 				$bookResult = new BookQueryResult($result);
 				$bookResult->genreTagList = self::createGenreListForResult($result, $individualGenreResults);				
@@ -397,7 +398,38 @@ class CockyBot {
 		}
 		return $str;
 	}
-
+	
+	public function runSerialNumbers($serialNumbers) {
+		$results = [];
+		$session = new TESS_Session();
+		$session->logIn();
+		$serialNumbersString = "(";
+		foreach ($serialNumbers as $sn) {
+			// look up record
+			$results = array_merge($results, $session->getQueryResults($sn."[SN]"));
+			$serialNumbersString .= $sn." ";
+		}
+		$serialNumbersString = rtrim($serialNumbersString) . ")[SN] AND ";
+		
+		$individualGenreQStrings = $this->getIndividualGenreQueries();
+		foreach ($individualGenreQStrings as &$qs) {
+			$qs = $serialNumbersString . $qs;
+		}
+		unset($qs);
+		$individualGenreResults = [];
+		// no need to run individual queries if no rew results
+		if(count($results) > 0) {
+			foreach($individualGenreQStrings as $genre => $query) {
+				sleep(self::DELAY_BETWEEN_QUERIES);
+				$individualGenreResults[$genre] = $session->getQueryResults($query);
+			}
+		}
+		$session->logOut();
+		$this->setPreviouslyTweetedSerialNumbers();
+		$results = $this->getNewResults($results);
+		$this->processResults($results, $individualGenreResults);
+	}
+	
 	// Compose tweet text and content and then send it to Twitter
 	// parameters: 
 	// $result - the BookQueryResult to tweet about
@@ -407,10 +439,10 @@ class CockyBot {
 		if($this->makeHistoricalPost) {
 			$message .= "From my ".self::formatQueryDate($this->date)." memory bank:\n";
 		}
-		$message .= "An application to trademark “" . $result->wordMark;
+		$message .= "An application to trademark “" . cleanWordMarkForTweet($result->wordMark);
 		$message .= "” was ".($this->makeHistoricalPost?"":"just ");
 		$message .= ($this->qType === "PO"?"published for opposition.":"filed.");
-		$message .= "\nCheck the links below to view more information:\n";
+		$message .= "\nMore information:\n";
 		$message .= "Status: " . $result->getShareableStatusLink() . "\n";
 		$message .= "Documents: " . $result->getShareableDocumentLink() . "\n";
 		$message .= "AMZN: " . $result->getAmazonSearchLink() . "\n";
@@ -426,6 +458,24 @@ class CockyBot {
 				$tweet = $this->twitter->send($message);
 			}
 		}
+	}
+	
+	// Attempts to modify wprdmark string to prevent autoformatting by Twitter 
+	// e.g. automatic link recognition
+	// parameters: 
+	// $wordMark - string that might be formatted by twitter 
+	// returns - modified string on successful preg_replace, else original wordMark
+	private function cleanWordMarkForTweet($wordMark) {
+		// twitter automatically detects valid TLDs in url-like strings and makes them links
+		// to prevent this, add a zero-width space (&#8203) when the wordmark might 
+		// have a TLD in it.
+		$pattern = '/(.*)\.([a-zA-Z])(.*)/';
+		$replacement = '$1.​$2$3';
+		$ret = preg_replace($pattern, $replacement, $wordMark);
+		if($ret) {
+			return $ret;
+		}
+		return $wordMark;
 	}
 
 	// Formats timestamps j M Y for inclusion in historical tweets
